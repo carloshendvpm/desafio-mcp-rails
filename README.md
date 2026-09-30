@@ -29,6 +29,8 @@ Usuário ──POST /ask──▶ Agent API ──generateContent──▶ Gemin
 | `buscar_cep` | BrasilAPI | endereço de um CEP |
 | `orcamento_viagem` | *local, sem API* | total em R$ + IOF (depende de `cotacao_moeda`) |
 | `planejar_ferias` | BrasilAPI + regras CLT | melhores datas de férias emendando feriados e fins de semana |
+| `requisitos_seguro_viagem` | *tabela local* (`config/seguro_viagem.yml`) | se o destino exige seguro, a cobertura mínima e a fonte da regra |
+| `clima_historico` | Open-Meteo Archive | clima típico nas datas da viagem (últimos 5 anos) + o que levar na mala |
 
 ### `planejar_ferias`: férias CLT emendando feriados
 
@@ -40,6 +42,22 @@ Recebe a divisão das férias (ex: `[30]`, `[15, 15]`, `[14, 10, 6]`) e testa to
 - Quando há vários períodos, eles são encaixados do maior para o menor, sem sobreposição.
 
 Limitações: considera só feriados nacionais (o Carnaval vem da BrasilAPI, mas é ponto facultativo) e jornada de segunda a sexta.
+
+### `requisitos_seguro_viagem`: exigência de seguro por destino
+
+As regras ficam em [`config/seguro_viagem.yml`](mcp_server/config/seguro_viagem.yml), por código ISO do país, e cada regra traz `fonte` e `revisado_em`. O `status` é um destes:
+
+- `obrigatorio`: exigido na entrada (ex: Espaço Schengen, com mínimo de €30.000).
+- `verificar`: regra em mudança. A tool não afirma nada e pede para confirmar.
+- `recomendado`: não é exigido na entrada.
+
+Países fora da tabela caem num padrão que recomenda confirmar no consulado. O nome do país é resolvido pelo mesmo lookup da `info_pais`. Regras de entrada mudam, então a tabela precisa de revisão periódica. Um teste garante que toda regra tem status válido, fonte e data.
+
+### `clima_historico`: o que levar na mala
+
+Busca numa única chamada as mesmas datas da viagem nos últimos 5 anos e calcula as médias de mínima e máxima, a porcentagem de dias com chuva e com neve e o vento. A partir disso sugere roupas: casaco pesado, camadas quando o dia e a noite têm grande diferença, guarda-chuva, calçado para neve etc. Serve para viagens além dos 14 dias da `clima_cidade`, e a resposta deixa claro que é média histórica, não previsão.
+
+Falhas de rede passageiras (conexão ou timeout) ganham uma nova tentativa automática no `HttpJson`, compartilhado por todas as tools.
 
 ## Como funciona
 
@@ -161,4 +179,5 @@ Em **Settings → Connectors → Add custom connector**, informe `https://xxxx.n
 - "Que moeda usam na Argentina e quanto ela vale hoje?" → `info_pais` e depois `cotacao_moeda`, porque o resultado de uma tool alimenta a outra
 - "Qual o endereço do CEP 01310-100?"
 - "Tenho 30 dias de férias em 2027 e quero dividir em 3 períodos. Quais as melhores datas pra emendar com feriados?"
+- "Vou pra Lisboa de 10 a 20 de dezembro. Preciso de seguro viagem? Que roupas eu levo?" → `requisitos_seguro_viagem` e `clima_historico`
 - "Quero tirar 10 dias de férias ainda esse ano e ir pra Buenos Aires gastando 150 mil pesos por dia. Quando é melhor e quanto sai?" → `planejar_ferias`, `cotacao_moeda` e `orcamento_viagem`

@@ -4,8 +4,16 @@
 module HttpJson
   class Error < StandardError; end
 
+  RETRIES = 1 # uma nova tentativa para falhas de rede passageiras (conexão/timeout)
+
   def self.get(url, params = {})
-    connection.get(url, params).body
+    tentativas = 0
+    begin
+      connection.get(url, params).body
+    rescue Faraday::ConnectionFailed, Faraday::TimeoutError
+      retry if (tentativas += 1) <= RETRIES
+      raise
+    end
   rescue Faraday::ResourceNotFound
     raise Error, "Nada encontrado (404) em #{url}"
   rescue Faraday::Error => e

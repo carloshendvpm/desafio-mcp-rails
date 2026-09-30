@@ -13,9 +13,7 @@ class InfoPaisTool < ApplicationTool
   annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(nome:)
-    alvo = normalize(nome)
-    pais = countries.find { |c| nomes_de(c).include?(alvo) }
-    raise ArgumentError, "País não encontrado: #{nome}" unless pais
+    pais = find_country(nome)
 
     {
       nome: pais.dig("translations", "por", "common") || pais.dig("name", "common"),
@@ -30,6 +28,13 @@ class InfoPaisTool < ApplicationTool
       bandeira: pais["flag"],
       vizinhos: pais["borders"]
     }
+  end
+
+  # Busca por nome em português/inglês, nome oficial, código ISO ou grafia alternativa.
+  # Também usada por RequisitosSeguroViagemTool.
+  def self.find_country(nome)
+    alvo = normalize(nome)
+    countries.find { |c| nomes_de(c).include?(alvo) } || raise(ArgumentError, "País não encontrado: #{nome}")
   end
 
   # O dataset (~1.4MB) é baixado uma vez e fica em memória no processo.

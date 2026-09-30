@@ -8,10 +8,11 @@ class McpTest < ActionDispatch::IntegrationTest
     assert result.dig("capabilities", "tools")
   end
 
-  test "tools/list expõe as 7 tools com schema" do
+  test "tools/list expõe as 9 tools com schema" do
     tools = rpc("tools/list").dig("result", "tools")
 
-    assert_equal %w[feriados_nacionais cotacao_moeda info_pais clima_cidade buscar_cep orcamento_viagem planejar_ferias],
+    assert_equal %w[feriados_nacionais cotacao_moeda info_pais clima_cidade buscar_cep orcamento_viagem planejar_ferias
+                    requisitos_seguro_viagem clima_historico],
                  tools.map { |t| t["name"] }
     assert tools.all? { |t| t["description"].present? && t.dig("inputSchema", "type") == "object" }
   end

@@ -24,9 +24,7 @@ class ClimaCidadeTool < ApplicationTool
   annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(cidade:, dias: 3)
-    local = HttpJson.get("https://geocoding-api.open-meteo.com/v1/search",
-                         name: cidade, count: 1, language: "pt")["results"]&.first
-    raise ArgumentError, "Cidade não encontrada: #{cidade}" unless local
+    local = geocode(cidade)
 
     previsao = HttpJson.get("https://api.open-meteo.com/v1/forecast",
                             latitude: local["latitude"], longitude: local["longitude"],
@@ -47,5 +45,13 @@ class ClimaCidadeTool < ApplicationTool
         }
       end
     }
+  end
+
+  # Nome da cidade -> { "name", "country", "latitude", "longitude", "timezone" }.
+  # Também usada por ClimaHistoricoTool.
+  def self.geocode(cidade)
+    HttpJson.get("https://geocoding-api.open-meteo.com/v1/search",
+                 name: cidade, count: 1, language: "pt")["results"]&.first ||
+      raise(ArgumentError, "Cidade não encontrada: #{cidade}")
   end
 end

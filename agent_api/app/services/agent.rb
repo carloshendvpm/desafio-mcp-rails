@@ -87,7 +87,7 @@ class Agent
       Hoje é #{Date.current.strftime("%d/%m/%Y")}.
 
       Regras:
-      - Dados reais (feriados, férias, câmbio, clima, países, CEP) vêm só das ferramentas. Nunca estime
+      - Dados reais (feriados, férias, câmbio, clima, países, seguro viagem, CEP) vêm só das ferramentas. Nunca estime
         nem invente preços, custo de vida ou qualquer valor que nenhuma ferramenta retornou.
       - Toda conversão para reais e todo orçamento passam pela ferramenta orcamento_viagem
         (com a cotação obtida em cotacao_moeda). Não faça contas de câmbio por conta própria.

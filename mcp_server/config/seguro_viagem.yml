@@ -1,0 +1,65 @@
+# Exigência de seguro viagem para turistas brasileiros, por país (código ISO alpha-2).
+# Regras de entrada mudam: cada regra traz a fonte e a data da última revisão.
+# status: obrigatorio | verificar (regra em mudança) | recomendado (não exigido na entrada)
+#
+# Países fora desta lista caem em `padrao`.
+
+regras:
+  - nome: Espaço Schengen
+    paises: [DE, AT, BE, BG, HR, DK, SK, SI, ES, EE, FI, FR, GR, HU, IS, IT, LV, LI, LT, LU, MT, NO, NL, PL, PT, RO, CZ, SE, CH]
+    status: obrigatorio
+    cobertura_minima: "€30.000"
+    coberturas: [despesas médicas e hospitalares, repatriação sanitária e funerária]
+    detalhes: >-
+      O seguro deve valer para toda a estadia e em todos os países do Espaço Schengen.
+      A imigração pode pedir a apólice na entrada, junto com a passagem de volta e a comprovação de recursos.
+    fonte: "Código de Vistos Schengen, Regulamento (CE) 810/2009, art. 15; orientação consular do Itamaraty"
+    revisado_em: "2026-09-30"
+
+  - nome: Cuba
+    paises: [CU]
+    status: obrigatorio
+    coberturas: [despesas médicas e hospitalares]
+    detalhes: As autoridades cubanas exigem seguro saúde válido no país, que pode ser verificado na chegada.
+    fonte: Autoridades migratórias de Cuba
+    revisado_em: "2026-09-30"
+
+  - nome: Catar
+    paises: [QA]
+    status: obrigatorio
+    coberturas: [emergências médicas]
+    detalhes: Desde 01/02/2023, visitantes precisam de seguro saúde que cubra emergências durante a estadia.
+    fonte: "Ministério da Saúde Pública do Catar (Lei nº 22/2021)"
+    revisado_em: "2026-09-30"
+
+  - nome: Argentina
+    paises: [AR]
+    status: verificar
+    coberturas: [despesas médicas e hospitalares]
+    detalhes: >-
+      O Decreto 366/2025 prevê exigir seguro saúde de estrangeiros não residentes.
+      Confirme a regulamentação em vigor antes de viajar.
+    fonte: "Decreto 366/2025 (Argentina)"
+    revisado_em: "2026-09-30"
+
+  - nome: Estados Unidos
+    paises: [US]
+    status: recomendado
+    detalhes: >-
+      Não é exigido na entrada, mas o atendimento médico é caro: uma ida ao pronto-socorro pode custar
+      milhares de dólares. Uma cobertura alta é fortemente recomendada.
+    fonte: Regras de entrada dos EUA para turistas (visto B1/B2)
+    revisado_em: "2026-09-30"
+
+  - nome: Destinos sem exigência de seguro na entrada
+    paises: [CA, GB, JP, MX, CL, UY, PE, CO, BR]
+    status: recomendado
+    detalhes: Não é exigido na entrada, mas sem seguro qualquer atendimento médico é pago do próprio bolso.
+    fonte: Regras de entrada de cada país para turistas brasileiros
+    revisado_em: "2026-09-30"
+
+padrao:
+  status: recomendado
+  detalhes: >-
+    Não há regra cadastrada para este país. Seguro viagem é sempre recomendado:
+    confirme a exigência no consulado ou no site oficial do país.
