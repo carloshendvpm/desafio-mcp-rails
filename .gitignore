@@ -1,0 +1,18 @@
+# Segredos — a chave do Gemini fica SÓ no .env local
+.env
+.env.*
+!.env.example
+**/config/master.key
+**/config/credentials/*.key
+
+**/log/*
+**/tmp/*
+!**/log/.keep
+!**/tmp/.keep
+**/storage/*
+.bundle/
+.DS_Store
+
+# Arquivos pessoais (não versionar)
+PITCH.md
+mise.toml

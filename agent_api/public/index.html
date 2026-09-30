@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agente de Viagem</title>
+  <style>
+    :root {
+      --bg: #f6f5fb; --card: #fff; --text: #1d1b2c; --muted: #6b6882;
+      --accent: #6c3ce0; --accent-soft: #efe9fd; --border: #e3e0ef; --error: #c62828;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #14121d; --card: #1e1b2b; --text: #ecebf3; --muted: #a09cb8;
+              --accent: #a58bff; --accent-soft: #2b2540; --border: #332e47; --error: #ff8a80; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    .sub { color: var(--muted); margin: 0 0 24px; }
+    form { display: flex; gap: 8px; }
+    textarea { flex: 1; resize: vertical; min-height: 52px; padding: 12px; border-radius: 10px;
+               border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; }
+    button { padding: 0 20px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+             font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 28px; }
+    .chip { background: var(--accent-soft); color: var(--accent); border: 0; padding: 6px 12px;
+            border-radius: 999px; font-size: .85rem; font-weight: 500; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+    .label { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .answer { white-space: pre-wrap; }
+    .step { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 10px 0; }
+    .step.err { border-color: var(--error); }
+    .step code { font-weight: 600; }
+    .step pre { margin: 6px 0 0; font-size: .78rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; }
+    .error { color: var(--error); }
+    .tools { font-size: .85rem; color: var(--muted); }
+    .tools code { color: var(--text); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🧳 Agente de Viagem</h1>
+  <p class="sub">Gemini + tools de um MCP server em Rails</p>
+
+  <form id="form">
+    <textarea id="q" placeholder="Pergunte algo sobre sua viagem…" required></textarea>
+    <button id="btn">Perguntar</button>
+  </form>
+  <div class="chips">
+    <button class="chip" type="button">Qual o próximo feriado nacional?</button>
+    <button class="chip" type="button">Vou pro Japão no próximo feriado por 5 dias gastando 15000 ienes/dia. Quanto dá em reais e como está o clima em Tóquio?</button>
+    <button class="chip" type="button">Qual o endereço do CEP 01310-100 e como vai estar o tempo lá amanhã?</button>
+    <button class="chip" type="button">Que moeda usam na Argentina e quanto ela vale hoje?</button>
+  </div>
+
+  <div id="out"></div>
+
+  <div class="card tools">
+    <div class="label">Tools descobertas no MCP (tools/list)</div>
+    <div id="tools">carregando…</div>
+  </div>
+</main>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  document.querySelectorAll(".chip").forEach((c) => c.onclick = () => { $("#q").value = c.textContent; $("#form").requestSubmit(); });
+
+  $("#form").onsubmit = async (e) => {
+    e.preventDefault();
+    $("#btn").disabled = true;
+    $("#out").innerHTML = `<div class="card">Pensando… 🤔</div>`;
+    try {
+      const res = await fetch("/ask", { method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ question: $("#q").value }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+
+      const steps = data.steps.map((s, i) => `
+        <div class="step ${s.error ? "err" : ""}">
+          ${i + 1}. <code>${esc(s.tool)}</code>(${esc(JSON.stringify(s.args))}) ${s.error ? "⚠️" : ""}
+          <pre>${esc(s.result)}</pre>
+        </div>`).join("");
+
+      $("#out").innerHTML = `
+        <div class="card"><div class="label">Resposta</div><div class="answer">${esc(data.answer)}</div></div>
+        <div class="card"><div class="label">Tools chamadas (${data.steps.length})</div>${steps || "nenhuma — o modelo respondeu direto"}</div>`;
+    } catch (err) {
+      $("#out").innerHTML = `<div class="card error">Erro: ${esc(err.message)}</div>`;
+    } finally {
+      $("#btn").disabled = false;
+    }
+  };
+
+  fetch("/tools").then((r) => r.json()).then((tools) => {
+    $("#tools").innerHTML = tools.map((t) => `<div><code>${esc(t.name)}</code> — ${esc(t.description)}</div>`).join("");
+  }).catch(() => { $("#tools").textContent = "MCP server indisponível"; });
+</script>
+</body>
+</html>

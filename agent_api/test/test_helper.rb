@@ -1,0 +1,6 @@
+ENV["RAILS_ENV"] ||= "test"
+ENV["GEMINI_API_KEY"] = "test-key"
+ENV["MCP_SERVER_URL"] = "http://mcp.test/mcp"
+require_relative "../config/environment"
+require "rails/test_help"
+require "webmock/minitest"

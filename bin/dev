@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Sobe os dois serviços: MCP server (3001) e Agent API (3000). Ctrl+C derruba ambos.
+set -e
+cd "$(dirname "$0")/.."
+
+(cd mcp_server && bin/rails server -p 3001) &
+(cd agent_api && bin/rails server -p 3000) &
+
+trap 'kill 0' INT TERM
+wait
