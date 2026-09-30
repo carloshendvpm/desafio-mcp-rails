@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agente de Viagem</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.12/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.6/purify.min.js"></script>
   <style>
     :root {
       --bg: #f6f5fb; --card: #fff; --text: #1d1b2c; --muted: #6b6882;
@@ -30,7 +32,16 @@
             border-radius: 999px; font-size: .85rem; font-weight: 500; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
     .label { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .answer { white-space: pre-wrap; }
+    .answer > :first-child { margin-top: 0; }
+    .answer > :last-child { margin-bottom: 0; }
+    .answer ul, .answer ol { padding-left: 1.3em; }
+    .answer li { margin: 2px 0; }
+    .you { margin: 24px 0 8px; text-align: right; }
+    .you span { display: inline-block; background: var(--accent); color: #fff; padding: 8px 14px;
+                border-radius: 14px 14px 4px 14px; max-width: 85%; text-align: left; }
+    details summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+    .bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .link { background: none; border: 0; color: var(--accent); padding: 0; font-size: .85rem; cursor: pointer; }
     .step { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 10px 0; }
     .step.err { border-color: var(--error); }
     .step code { font-weight: 600; }
@@ -43,7 +54,10 @@
 <body>
 <main>
   <h1>🧳 Agente de Viagem</h1>
-  <p class="sub">Gemini + tools de um MCP server em Rails</p>
+  <div class="bar">
+    <p class="sub" style="margin:0">Gemini + tools de um MCP server em Rails</p>
+    <button class="link" id="reset" type="button">Nova conversa</button>
+  </div>
 
   <form id="form">
     <textarea id="q" placeholder="Pergunte algo sobre sua viagem…" required></textarea>
@@ -54,9 +68,10 @@
     <button class="chip" type="button">Vou pro Japão no próximo feriado por 5 dias gastando 15000 ienes/dia. Quanto dá em reais e como está o clima em Tóquio?</button>
     <button class="chip" type="button">Qual o endereço do CEP 01310-100 e como vai estar o tempo lá amanhã?</button>
     <button class="chip" type="button">Que moeda usam na Argentina e quanto ela vale hoje?</button>
+    <button class="chip" type="button">Tenho 30 dias de férias em 2027 e quero dividir em 3 períodos. Quais as melhores datas pra emendar com feriados?</button>
   </div>
 
-  <div id="out"></div>
+  <div id="thread"></div>
 
   <div class="card tools">
     <div class="label">Tools descobertas no MCP (tools/list)</div>
@@ -70,15 +85,31 @@
 
   document.querySelectorAll(".chip").forEach((c) => c.onclick = () => { $("#q").value = c.textContent; $("#form").requestSubmit(); });
 
+  // A API é stateless: a conversa fica aqui no navegador e vai junto em cada pergunta.
+  let history = [];
+  const md = (text) => DOMPurify.sanitize(marked.parse(text));
+
+  $("#reset").onclick = () => { history = []; $("#thread").innerHTML = ""; $("#q").focus(); };
+
   $("#form").onsubmit = async (e) => {
     e.preventDefault();
+    const question = $("#q").value.trim();
+    if (!question) return;
+
     $("#btn").disabled = true;
-    $("#out").innerHTML = `<div class="card">Pensando… 🤔</div>`;
+    $("#q").value = "";
+    const turn = document.createElement("div");
+    turn.innerHTML = `<div class="you"><span>${esc(question)}</span></div><div class="card">Pensando… 🤔</div>`;
+    $("#thread").append(turn);
+    turn.scrollIntoView({ behavior: "smooth" });
+
     try {
       const res = await fetch("/ask", { method: "POST", headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ question: $("#q").value }) });
+                                        body: JSON.stringify({ question, history }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
+
+      history.push({ role: "user", text: question }, { role: "model", text: data.answer });
 
       const steps = data.steps.map((s, i) => `
         <div class="step ${s.error ? "err" : ""}">
@@ -86,15 +117,23 @@
           <pre>${esc(s.result)}</pre>
         </div>`).join("");
 
-      $("#out").innerHTML = `
-        <div class="card"><div class="label">Resposta</div><div class="answer">${esc(data.answer)}</div></div>
-        <div class="card"><div class="label">Tools chamadas (${data.steps.length})</div>${steps || "nenhuma — o modelo respondeu direto"}</div>`;
+      turn.querySelector(".card").outerHTML = `
+        <div class="card">
+          <div class="answer">${md(data.answer)}</div>
+          ${data.steps.length ? `<details style="margin-top:12px"><summary>${data.steps.length} tool(s) chamada(s) no MCP</summary>${steps}</details>` : ""}
+        </div>`;
     } catch (err) {
-      $("#out").innerHTML = `<div class="card error">Erro: ${esc(err.message)}</div>`;
+      turn.querySelector(".card").outerHTML = `<div class="card error">Erro: ${esc(err.message)}</div>`;
     } finally {
       $("#btn").disabled = false;
+      $("#q").focus();
     }
   };
+
+  // Enter envia, Shift+Enter quebra linha
+  $("#q").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#form").requestSubmit(); }
+  });
 
   fetch("/tools").then((r) => r.json()).then((tools) => {
     $("#tools").innerHTML = tools.map((t) => `<div><code>${esc(t.name)}</code> — ${esc(t.description)}</div>`).join("");

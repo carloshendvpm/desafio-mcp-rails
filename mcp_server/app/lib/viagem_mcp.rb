@@ -8,7 +8,8 @@ module ViagemMcp
     InfoPaisTool,
     ClimaCidadeTool,
     BuscarCepTool,
-    OrcamentoViagemTool
+    OrcamentoViagemTool,
+    PlanejarFeriasTool
   ].freeze
 
   def self.server
@@ -16,7 +17,7 @@ module ViagemMcp
       name: "viagem-mcp",
       title: "Assistente de Viagem",
       version: "1.0.0",
-      instructions: "Ferramentas para planejar viagens: feriados, câmbio, países, clima, CEP e orçamento.",
+      instructions: "Ferramentas para planejar viagens: feriados, férias CLT, câmbio, países, clima, CEP e orçamento.",
       tools: TOOLS
     )
   end

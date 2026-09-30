@@ -28,6 +28,18 @@ Usuário ──POST /ask──▶ Agent API ──generateContent──▶ Gemin
 | `clima_cidade` | Open-Meteo | previsão de até 14 dias |
 | `buscar_cep` | BrasilAPI | endereço de um CEP |
 | `orcamento_viagem` | *local, sem API* | total em R$ + IOF (depende de `cotacao_moeda`) |
+| `planejar_ferias` | BrasilAPI + regras CLT | melhores datas de férias emendando feriados e fins de semana |
+
+### `planejar_ferias`: férias CLT emendando feriados
+
+Recebe a divisão das férias (ex: `[30]`, `[15, 15]`, `[14, 10, 6]`) e testa todas as datas de início possíveis. Para cada uma, estende o descanso para trás e para frente enquanto os dias forem fim de semana ou feriado nacional. Depois ordena as opções pelo total de dias de descanso. Regras da CLT aplicadas:
+
+- As férias contam em dias corridos (art. 130). São até 3 períodos, um com pelo menos 14 dias e os outros com pelo menos 5 (art. 134 §1).
+- As férias não podem começar nos 2 dias antes de um feriado ou do repouso semanal (art. 134 §3). Na prática, nunca começam na sexta, no sábado, no domingo, num feriado ou na véspera de um.
+- O empregado precisa ser avisado 30 dias antes (art. 135), por isso a busca começa em hoje + 30. O pagamento sai até 2 dias antes do início (art. 145). As duas datas vão na resposta.
+- Quando há vários períodos, eles são encaixados do maior para o menor, sem sobreposição.
+
+Limitações: considera só feriados nacionais (o Carnaval vem da BrasilAPI, mas é ponto facultativo) e jornada de segunda a sexta.
 
 ## Como funciona
 
@@ -45,7 +57,8 @@ Usuário ──POST /ask──▶ Agent API ──generateContent──▶ Gemin
   2. Envia a pergunta com as tools. **O modelo decide** com base no nome, na descrição e no schema de cada tool.
   3. Se vier `functionCall`, o agente executa `tools/call` no MCP e devolve o resultado como `functionResponse`.
   4. Repete até vir texto, no máximo 8 rodadas. O histórico inteiro vai em cada chamada, porque o modelo é stateless.
-- `POST /ask` retorna `{ answer, steps }`. `steps` mostra quais tools foram chamadas, com quais argumentos e o que retornaram.
+- `POST /ask` recebe `{ question, history? }` e retorna `{ answer, steps }`. `steps` mostra quais tools foram chamadas, com quais argumentos e o que retornaram.
+- **Conversa:** a API é stateless. O cliente (a página de demo) guarda as trocas e reenvia as últimas 10 em `history: [{ role: "user"|"model", text }]`. Assim o agente pode pedir um dado que falta ("quantos dias?") e o usuário responde na mensagem seguinte.
 - `GET /` abre uma página de demo. `GET /tools` mostra o que o agente descobriu no MCP.
 
 ## Rodando
@@ -80,7 +93,7 @@ O servidor também funciona com o MCP Inspector: `npx @modelcontextprotocol/insp
 ## Testes
 
 ```bash
-(cd mcp_server && bin/rails test)   # tools com APIs externas stubadas (WebMock) + protocolo MCP
+(cd mcp_server && bin/rails test)   # tools (inclui regras CLT de férias) com APIs externas stubadas (WebMock) + protocolo MCP
 (cd agent_api && bin/rails test)    # loop do agente com dublês, cliente MCP, erros
 ```
 
@@ -90,3 +103,5 @@ O servidor também funciona com o MCP Inspector: `npx @modelcontextprotocol/insp
 - "Vou pro Japão no próximo feriado por 5 dias gastando 15000 ienes/dia. Quanto dá em reais e como está o clima em Tóquio?" → feriados, cotação, clima e orçamento encadeados
 - "Que moeda usam na Argentina e quanto ela vale hoje?" → `info_pais` e depois `cotacao_moeda`, porque o resultado de uma tool alimenta a outra
 - "Qual o endereço do CEP 01310-100?"
+- "Tenho 30 dias de férias em 2027 e quero dividir em 3 períodos. Quais as melhores datas pra emendar com feriados?"
+- "Quero tirar 10 dias de férias ainda esse ano e ir pra Buenos Aires gastando 150 mil pesos por dia. Quando é melhor e quanto sai?" → `planejar_ferias`, `cotacao_moeda` e `orcamento_viagem`
