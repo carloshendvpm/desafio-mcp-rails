@@ -3,10 +3,11 @@ class AskController < ApplicationController
     render json: { error: e.message }, status: :bad_gateway
   end
 
-  # POST /ask { "question": "..." }
+  # POST /ask { "question": "...", "history": [{ "role": "user"|"model", "text": "..." }] }
   def create
     question = params.require(:question)
-    result = Agent.new.ask(question)
+    history = params.fetch(:history, []).map { |m| m.permit(:role, :text).to_h }
+    result = Agent.new.ask(question, history: history)
 
     render json: { question: question, answer: result.answer, steps: result.steps }
   end

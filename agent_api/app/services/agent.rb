@@ -8,6 +8,7 @@
 #   4. Repete até o modelo responder em texto (ou atingir MAX_TURNS).
 class Agent
   MAX_TURNS = 8
+  MAX_HISTORY = 10 # mensagens anteriores (pergunta/resposta) enviadas como contexto
 
   class TooManyTurns < StandardError; end
 
@@ -18,9 +19,11 @@ class Agent
     @gemini = gemini
   end
 
-  def ask(question)
+  # `history`: turnos anteriores da conversa, [{ "role" => "user"|"model", "text" => "..." }].
+  # A API continua stateless: quem guarda a conversa é o cliente, que a reenvia a cada pergunta.
+  def ask(question, history: [])
     declarations = function_declarations
-    contents = [ { role: "user", parts: [ { text: question } ] } ]
+    contents = history_contents(history) + [ { role: "user", parts: [ { text: question } ] } ]
     steps = []
 
     MAX_TURNS.times do
@@ -65,18 +68,35 @@ class Agent
     }
   end
 
+  def history_contents(history)
+    history.last(MAX_HISTORY).filter_map do |message|
+      role, text = message.values_at("role", "text")
+      next unless %w[user model].include?(role) && text.present?
+
+      { role: role, parts: [ { text: text.to_s } ] }
+    end
+  end
+
   def final_text(content)
     content["parts"].reject { |p| p["thought"] }.filter_map { |p| p["text"] }.join.strip
   end
 
   def system_instruction
     <<~PROMPT
-      Você é um assistente de viagem simpático e objetivo. Responda sempre em português do Brasil.
+      Você é um assistente de viagem. Responda em português do Brasil, de forma direta e curta.
       Hoje é #{Date.current.strftime("%d/%m/%Y")}.
-      Use as ferramentas disponíveis sempre que a pergunta depender de dados reais (feriados,
-      câmbio, clima, países, CEP, orçamento). Não invente valores: se precisar de uma cotação
-      para calcular um orçamento, consulte a cotação antes. Você pode chamar várias ferramentas.
-      Se uma ferramenta falhar, explique o problema ao usuário.
+
+      Regras:
+      - Dados reais (feriados, férias, câmbio, clima, países, CEP) vêm só das ferramentas. Nunca estime
+        nem invente preços, custo de vida ou qualquer valor que nenhuma ferramenta retornou.
+      - Toda conversão para reais e todo orçamento passam pela ferramenta orcamento_viagem
+        (com a cotação obtida em cotacao_moeda). Não faça contas de câmbio por conta própria.
+      - Se faltar dado para o orçamento (quantos dias, gasto diário), responda o que já dá
+        para responder e termine pedindo o que falta em uma única frase.
+      - Na previsão do tempo, mostre só os dias relevantes para a viagem.
+      - Formato: markdown simples (negrito e listas curtas). Sem títulos, sem separadores,
+        no máximo um emoji. Idealmente até 10 linhas.
+      - Se uma ferramenta falhar, diga isso em uma frase e siga com o resto.
     PROMPT
   end
 end
