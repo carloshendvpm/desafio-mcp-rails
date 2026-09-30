@@ -21,7 +21,7 @@ class ClimaCidadeTool < ApplicationTool
     },
     required: [ "cidade" ]
   )
-  annotations(read_only_hint: true, open_world_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(cidade:, dias: 3)
     local = HttpJson.get("https://geocoding-api.open-meteo.com/v1/search",

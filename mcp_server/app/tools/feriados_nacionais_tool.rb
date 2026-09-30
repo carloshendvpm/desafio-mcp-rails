@@ -7,7 +7,7 @@ class FeriadosNacionaisTool < ApplicationTool
       ano: { type: "integer", description: "Ano com 4 dígitos. Padrão: ano atual." }
     }
   )
-  annotations(read_only_hint: true, open_world_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(ano: Date.current.year)
     feriados = HttpJson.get("https://brasilapi.com.br/api/feriados/v1/#{ano.to_i}")

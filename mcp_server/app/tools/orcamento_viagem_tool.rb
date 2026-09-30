@@ -15,7 +15,7 @@ class OrcamentoViagemTool < ApplicationTool
     },
     required: [ "dias", "gasto_diario", "moeda", "cotacao_em_reais" ]
   )
-  annotations(read_only_hint: true, idempotent_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false)
 
   IOF_CARTAO = 0.035 # IOF sobre compras internacionais no cartão (2025+)
 

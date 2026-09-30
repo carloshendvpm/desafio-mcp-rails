@@ -22,6 +22,21 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_response :accepted
   end
 
+  test "GET e DELETE respondem 405 (sem stream SSE nem sessão)" do
+    get "/mcp"
+    assert_response :method_not_allowed
+    assert_equal "POST", response.headers["Allow"]
+
+    delete "/mcp"
+    assert_response :method_not_allowed
+  end
+
+  test "tools são anunciadas como somente leitura e não destrutivas" do
+    annotations = rpc("tools/list").dig("result", "tools").map { |t| t["annotations"] }
+
+    assert annotations.all? { |a| a["readOnlyHint"] == true && a["destructiveHint"] == false }
+  end
+
   test "tool inexistente devolve erro JSON-RPC" do
     assert rpc("tools/call", name: "nao_existe", arguments: {})["error"]
   end

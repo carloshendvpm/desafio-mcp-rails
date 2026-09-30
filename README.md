@@ -90,6 +90,63 @@ curl -s localhost:3001/mcp -H 'Content-Type: application/json' \
 
 O servidor também funciona com o MCP Inspector: `npx @modelcontextprotocol/inspector`, com transporte Streamable HTTP e URL `http://localhost:3001/mcp`.
 
+## Conectando o MCP server no Claude
+
+O `mcp_server` segue o protocolo MCP padrão, então funciona com qualquer cliente MCP, não só com o nosso agente. As tools, as descrições e os schemas são os mesmos, e é o Claude quem decide quando chamar cada tool.
+
+Suba só o servidor: `cd mcp_server && bin/rails s -p 3001`.
+
+### Claude Code
+
+O repo já traz um [`.mcp.json`](.mcp.json). Abra o `claude` na raiz do projeto e aprove o servidor `viagem` quando ele perguntar. Para usar em qualquer pasta:
+
+```bash
+claude mcp add --transport http viagem http://localhost:3001/mcp
+```
+
+Depois é só perguntar, por exemplo: *"quais as melhores datas pra tirar 10 dias de férias em 2027?"*. O Claude chama `mcp__viagem__planejar_ferias`. O comando `/mcp` mostra as tools descobertas.
+
+Também dá para testar sem abrir o modo interativo:
+
+```bash
+claude -p "Qual a melhor data pra 10 dias de férias em 2027?" \
+  --mcp-config .mcp.json --strict-mcp-config --allowedTools "mcp__viagem__planejar_ferias"
+```
+
+### Claude Desktop
+
+O Claude Desktop inicia servidores locais como processos (stdio). O pacote [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) faz a ponte até o nosso HTTP. Em `claude_desktop_config.json` (Settings → Developer → Edit Config):
+
+```json
+{
+  "mcpServers": {
+    "viagem": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:3001/mcp"]
+    }
+  }
+}
+```
+
+Reinicie o app e as tools aparecem no menu de ferramentas da conversa. No Windows com WSL2, o `localhost` do Windows já alcança o servidor rodando no WSL.
+
+### claude.ai (conector personalizado)
+
+O claude.ai conecta pela internet, então o servidor precisa de uma URL pública em HTTPS. Para uma demo, use um túnel:
+
+```bash
+ngrok http 3001   # gera https://xxxx.ngrok-free.app (hosts do ngrok já liberados em development.rb)
+```
+
+Em **Settings → Connectors → Add custom connector**, informe `https://xxxx.ngrok-free.app/mcp`.
+
+> ⚠️ O `/mcp` não tem autenticação: qualquer um com a URL do túnel pode chamar as tools. Use o túnel só durante a demo. Em produção, o caminho seria OAuth, que a spec do MCP prevê.
+
+### Detalhes de protocolo que fazem isso funcionar
+
+- **Streamable HTTP stateless:** cada `POST /mcp` é independente e a resposta é JSON. `GET` e `DELETE` respondem `405`, o que diz ao cliente que não há stream SSE nem sessão para encerrar.
+- **Annotations:** todas as tools são anunciadas com `readOnlyHint: true` e `destructiveHint: false`. Clientes como o Claude usam isso para decidir quanto cuidado pedir antes de executar.
+
 ## Testes
 
 ```bash

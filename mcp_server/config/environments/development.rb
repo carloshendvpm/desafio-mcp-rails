@@ -37,4 +37,8 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Permite expor o MCP server por um túnel HTTPS (ex: `ngrok http 3001`) para conectar no claude.ai.
+  config.hosts << ".ngrok-free.app"
+  config.hosts << ".ngrok.app"
 end

@@ -10,4 +10,11 @@ class McpController < ApplicationController
       head :accepted # notificações JSON-RPC não têm resposta
     end
   end
+
+  # GET abriria um stream SSE e DELETE encerraria uma sessão. Este servidor é stateless e só
+  # responde JSON, então segue a spec do Streamable HTTP: 405 diz ao cliente para usar só POST.
+  def method_not_allowed
+    response.set_header("Allow", "POST")
+    head :method_not_allowed
+  end
 end

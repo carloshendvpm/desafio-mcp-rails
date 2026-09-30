@@ -10,7 +10,7 @@ class InfoPaisTool < ApplicationTool
     },
     required: [ "nome" ]
   )
-  annotations(read_only_hint: true, open_world_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(nome:)
     alvo = normalize(nome)

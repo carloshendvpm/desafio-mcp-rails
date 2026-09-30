@@ -8,7 +8,7 @@ class CotacaoMoedaTool < ApplicationTool
     },
     required: [ "moeda" ]
   )
-  annotations(read_only_hint: true, open_world_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(moeda:)
     codigo = moeda.to_s.strip.upcase

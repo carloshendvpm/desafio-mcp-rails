@@ -32,7 +32,7 @@ class PlanejarFeriasTool < ApplicationTool
     },
     required: [ "periodos" ]
   )
-  annotations(read_only_hint: true, open_world_hint: true)
+  annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: true)
 
   def self.run(periodos:, ano: nil, a_partir_de: nil, opcoes: 3)
     validar_periodos!(periodos)
